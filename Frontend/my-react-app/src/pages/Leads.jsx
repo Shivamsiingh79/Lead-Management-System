@@ -38,7 +38,7 @@ const Leads = () => {
     try {
       const token = localStorage.getItem("token");
 
-      await axios.delete(`http://localhost:5000/api/leads/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/leads/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

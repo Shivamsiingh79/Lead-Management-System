@@ -19,7 +19,7 @@ const CreateAdmin = () => {
       const token = localStorage.getItem("token");
 
       await axios.post(
-        "http://localhost:5000/api/admin/create",
+        `${import.meta.env.VITE_API_URL}/admin/create`,
         form,
         {
           headers: {

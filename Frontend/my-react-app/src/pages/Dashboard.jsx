@@ -25,7 +25,7 @@ const Dashboard = () => {
       const token = localStorage.getItem("token");
 
       const { data } = await axios.get(
-        "http://localhost:5000/api/leads",
+        `${import.meta.env.VITE_API_URL}/leads`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
