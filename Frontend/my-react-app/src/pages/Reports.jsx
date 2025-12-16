@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../utils/api"; // ✅ axios instance
 import {
   PieChart,
   Pie,
@@ -18,31 +18,26 @@ const Reports = () => {
 
   useEffect(() => {
     const fetchReport = async () => {
-      const token = localStorage.getItem("token");
+      try {
+        const { data } = await api.get("/leads");
 
-      const { data } = await axios.get(
-        "http://localhost:5000/api/leads",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+        const summary = {
+          website: 0,
+          google: 0,
+          facebook: 0,
+        };
 
-      const summary = {
-        website: 0,
-        google: 0,
-        facebook: 0,
-      };
+        data.forEach((lead) => {
+          const source = lead.source?.toLowerCase();
+          if (summary[source] !== undefined) {
+            summary[source]++;
+          }
+        });
 
-      data.forEach((lead) => {
-        const source = lead.source?.toLowerCase();
-        if (summary[source] !== undefined) {
-          summary[source]++;
-        }
-      });
-
-      setReport(summary);
+        setReport(summary);
+      } catch (error) {
+        console.error("Failed to fetch report", error);
+      }
     };
 
     fetchReport();
@@ -58,7 +53,6 @@ const Reports = () => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Reports</h1>
         <p className="text-gray-500 mt-1">
@@ -66,14 +60,12 @@ const Reports = () => {
         </p>
       </div>
 
-      {/* Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
         <ReportCard title="Website Leads" value={report.website} />
         <ReportCard title="Google Leads" value={report.google} />
         <ReportCard title="Facebook Leads" value={report.facebook} />
       </div>
 
-      {/* Pie Chart */}
       <div className="bg-white rounded-xl shadow p-6">
         <h2 className="text-xl font-semibold text-gray-700 mb-4">
           Leads Distribution by Source
@@ -97,7 +89,6 @@ const Reports = () => {
                   />
                 ))}
               </Pie>
-
               <Tooltip />
               <Legend />
             </PieChart>
