@@ -19,7 +19,7 @@ const Reports = () => {
   useEffect(() => {
     const fetchReport = async () => {
       try {
-        const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/leads`);
+        const { data } = await api.get(`${import.meta.env.VITE_API_URL}/leads`);
 
         const summary = {
           website: 0,
