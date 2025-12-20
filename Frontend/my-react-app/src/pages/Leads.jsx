@@ -1,40 +1,46 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
+import api from "../utils/api";
 
 const LEADS_PER_PAGE = 10;
+const STATUSES = ["New", "Ongoing", "Closed"];
 
 const Leads = () => {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState("All");
 
   const { user } = useAuth();
 
+  const fetchLeads = async (status = "All") => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const url =
+        status === "All"
+          ? `${import.meta.env.VITE_API_URL}/leads`
+          : `${import.meta.env.VITE_API_URL}/leads?status=${status}`;
+
+      const { data } = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setLeads(data);
+      setCurrentPage(1);
+    } catch {
+      console.error("Failed to fetch leads");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchLeads = async () => {
-      try {
-        const token = localStorage.getItem("token");
-
-        const { data } = await axios.get(
-          `${import.meta.env.VITE_API_URL}/leads`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        setLeads(data);
-      } catch {
-        console.error("Failed to fetch leads");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLeads();
-  }, []);
+    fetchLeads(statusFilter);
+  }, [statusFilter]);
 
   const deleteLead = async (id) => {
     if (!window.confirm("Delete this lead permanently?")) return;
@@ -50,7 +56,6 @@ const Leads = () => {
 
       setLeads((prev) => prev.filter((lead) => lead._id !== id));
 
-      // If page becomes empty after delete, go back a page
       if ((leads.length - 1) % LEADS_PER_PAGE === 0 && currentPage > 1) {
         setCurrentPage((p) => p - 1);
       }
@@ -59,11 +64,36 @@ const Leads = () => {
     }
   };
 
+  const updateStatus = async (id, status) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const { data } = await axios.post(
+        `${import.meta.env.VITE_API_URL}/leads/${id}/status`,{status},
+        {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+      );
+      console.log("Status updated:", data);
+
+      setLeads((prev) =>
+        prev.map((lead) =>
+          lead._id === id ? data : lead
+        )
+      );
+    } catch {
+      console.log("Failed to update status");
+      alert("Failed to update status");
+    }
+  };
+
   if (loading) {
     return <div className="p-8 text-gray-500">Loading leads...</div>;
   }
 
-  // Pagination calculations
+  // Pagination
   const totalPages = Math.ceil(leads.length / LEADS_PER_PAGE);
   const startIndex = (currentPage - 1) * LEADS_PER_PAGE;
   const paginatedLeads = leads.slice(
@@ -73,9 +103,23 @@ const Leads = () => {
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">
-        Leads
-      </h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">
+          Leads
+        </h1>
+
+        {/* Status Filter */}
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="border rounded px-3 py-2 text-sm"
+        >
+          <option value="All">All</option>
+          <option value="New">New</option>
+          <option value="Ongoing">Ongoing</option>
+          <option value="Closed">Closed</option>
+        </select>
+      </div>
 
       <div className="bg-white rounded-xl shadow overflow-x-auto">
         <table className="min-w-full">
@@ -109,10 +153,27 @@ const Leads = () => {
                 </td>
 
                 <td className="px-5 py-3">
-                  <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700">
-                    {lead.status}
-                  </span>
-                </td>
+  {user?.email === "admin@gmail.com" ? (
+    <select
+      value={lead.status}
+      onChange={(e) =>{
+        updateStatus(lead._id, e.target.value)
+        console.log(e.target.value)
+      }
+      }
+      className="border rounded px-2 py-1 text-sm bg-white"
+    >
+      <option value="New">New</option>
+      <option value="Ongoing">Ongoing</option>
+      <option value="Closed">Closed</option>
+    </select>
+  ) : (
+    <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700">
+      {lead.status}
+    </span>
+  )}
+</td>
+
 
                 <td className="px-5 py-3 text-sm text-gray-500">
                   {new Date(lead.createdAt).toLocaleDateString()}
@@ -139,7 +200,7 @@ const Leads = () => {
           </div>
         )}
 
-        {/* Pagination Controls */}
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-5 px-6 py-4 border-t">
             <button

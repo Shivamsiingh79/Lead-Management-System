@@ -2,12 +2,67 @@ const Lead = require("../models/Lead");
 
 exports.getLeads = async (req, res) => {
   try {
-    const leads = await Lead.find().sort({ createdAt: -1 });
+    const { status } = req.query;
+
+    const filter = {};
+
+    if (status) {
+      const allowedStatuses = ["New", "Ongoing", "Closed"];
+
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({
+          message: "Invalid status filter"
+        });
+      }
+
+      filter.status = status;
+    }
+
+    const leads = await Lead.find(filter).sort({ createdAt: -1 });
+
     res.json(leads);
+
   } catch (error) {
-    res.status(500).json({ message: "Failed to fetch leads" });
+    res.status(500).json({
+      message: "Failed to fetch leads"
+    });
   }
 };
+
+
+exports.updateLeadStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    const allowedStatuses = ["New", "Ongoing", "Closed"];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        message: "Invalid status value"
+      });
+    }
+
+    const lead = await Lead.findById(req.params.id);
+
+    if (!lead) {
+      return res.status(404).json({
+        message: "Lead not found"
+      });
+    }
+
+    lead.status = status;
+    await lead.save();
+
+    res.status(200).json(lead);
+
+  } catch (error) {
+    console.error("Update Status Error:", error);
+    res.status(500).json({
+      message: "Server error while updating lead status"
+    });
+  }
+};
+
 
 exports.createLead = async (req, res) => {
   try {
